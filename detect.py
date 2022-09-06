@@ -7,6 +7,10 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))),'yolov7'))
+print(sys.path)
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
