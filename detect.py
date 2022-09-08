@@ -10,7 +10,7 @@ from numpy import random
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(os.path.dirname(__file__))),'yolov7'))
-print(sys.path)
+
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -26,7 +26,8 @@ import numpy as np
 
 def detect(save_img=False):
 
-    csv_columns = ['class', 'player1.x', 'player1.y',
+    csv_columns = ['video_id','time','class',  
+                   'player1.x', 'player1.y',
                    'player1.x', 'player1.y',
                    'player2.x', 'player2.y',
                    'player3.x', 'player3.y',
@@ -73,10 +74,11 @@ def detect(save_img=False):
     if webcam:
         view_img = check_imshow()
         cudnn.benchmark = True  # set True to speed up constant image size inference
+        print("loadStream")
         dataset = LoadStreams(source, img_size=imgsz, stride=stride)
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride)
-
+        print("loadImages")
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
@@ -88,7 +90,13 @@ def detect(save_img=False):
     old_img_b = 1
 
     t0 = time.time()
+    tmp_path = ''
+    frame_count = 0
     for path, img, im0s, vid_cap in dataset:
+        if tmp_path != path:
+            tmp_path = path
+            frame_count = 0
+        frame_count +=1
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -102,34 +110,47 @@ def detect(save_img=False):
             old_img_w = img.shape[3]
             for i in range(3):
                 model(img, augment=opt.augment)[0]
-
+        print(img.shape)
         # Inference
         t1 = time_synchronized()
         pred = model(img, augment=opt.augment)[0]
         t2 = time_synchronized()
-
+        
         # Apply NMS
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t3 = time_synchronized()
-
+        #print(pred[0])
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
         #print(pred)
         pred_np = pred[0].cpu().numpy()
-        #print(pred_np)
+        print(pred_np)
+        
         row = []
 
         pred_np_final = np.zeros((6,3))
         pred_np_xy = pred_np[:,:3]
-        pred_np_xy[:,:1] = pred_np[:,:1]+pred_np[:,2:3]/2
-        pred_np_xy[:, 1:2] = pred_np[:, 1:2] + pred_np[:, 3:4] / 2
-
-        ball_index = np.where(pred_np == 0)[0]
+        #pred_np_xy[:,:1] = pred_np[:,:1]+pred_np[:,2:3]/2
+        #pred_np_xy[:, 1:2] = pred_np[:, 1:2] + pred_np[:, 3:4] / 2
+        
+        ball_index = np.where(pred_np == 32)[0]
+        print(len(ball_index))
+        ball = 0
+        if len(ball_index)>1:
+            for i in ball_index:
+                print(i)
+                print(pred_np[i])
+                ball_conf= pred_np[i][4]
+                if ball_conf > ball:
+                    ball = ball_conf
+                    ball_index = [i]
+        print(ball_index)
+                 
         if ball_index:
             #print(ball_index)
-            x = pred_np_xy[ball_index][0][0]
-            y = pred_np_xy[ball_index][0][1]
+            x = pred_np_xy[ball_index[0]][0]
+            y = pred_np_xy[ball_index[0]][1]
             pred_np_xy[:,2:3] = ((np.full((len(pred_np_xy),1),x)-pred_np_xy[:,0:1])**2
                                  +(np.full((len(pred_np_xy),1),y)-pred_np_xy[:,1:2])**2)**0.5
             #print(pred_np_xy)
@@ -139,6 +160,8 @@ def detect(save_img=False):
                 row.append(pred_np_xy[distance_list[0][i]][1])
             #print(row)
             row.insert(0, 'play')
+            row.insert(0, frame_count*0.04)
+            row.insert(0, path.split('\\')[-1].split('.')[0])
         else:
             continue
 
@@ -147,7 +170,7 @@ def detect(save_img=False):
         with open('classify.csv', mode='a', newline='') as f:
             csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(row)
-            
+           
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
@@ -217,6 +240,7 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    ##
     parser.add_argument('--weights', nargs='+', type=str, default='yolov7.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='inference/images', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
