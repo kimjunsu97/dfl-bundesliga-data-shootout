@@ -17,7 +17,7 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
-
+from tqdm import tqdm
 import csv
 import os
 import numpy as np
@@ -74,11 +74,11 @@ def detect(save_img=False):
     if webcam:
         view_img = check_imshow()
         cudnn.benchmark = True  # set True to speed up constant image size inference
-        print("loadStream")
+        #print("loadStream")
         dataset = LoadStreams(source, img_size=imgsz, stride=stride)
     else:
         dataset = LoadImages(source, img_size=imgsz, stride=stride)
-        print("loadImages")
+        #print("loadImages")
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
@@ -110,7 +110,7 @@ def detect(save_img=False):
             old_img_w = img.shape[3]
             for i in range(3):
                 model(img, augment=opt.augment)[0]
-        print(img.shape)
+        #print(img.shape)
         # Inference
         t1 = time_synchronized()
         pred = model(img, augment=opt.augment)[0]
@@ -125,7 +125,7 @@ def detect(save_img=False):
             pred = apply_classifier(pred, modelc, img, im0s)
         #print(pred)
         pred_np = pred[0].cpu().numpy()
-        print(pred_np)
+        #print(pred_np)
         
         row = []
 
@@ -135,17 +135,17 @@ def detect(save_img=False):
         #pred_np_xy[:, 1:2] = pred_np[:, 1:2] + pred_np[:, 3:4] / 2
         
         ball_index = np.where(pred_np == 32)[0]
-        print(len(ball_index))
+        #print(len(ball_index))
         ball = 0
         if len(ball_index)>1:
             for i in ball_index:
-                print(i)
-                print(pred_np[i])
+                #print(i)
+                #print(pred_np[i])
                 ball_conf= pred_np[i][4]
                 if ball_conf > ball:
                     ball = ball_conf
                     ball_index = [i]
-        print(ball_index)
+        #print(ball_index)
                  
         if ball_index:
             #print(ball_index)
