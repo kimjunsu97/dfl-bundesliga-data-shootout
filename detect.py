@@ -26,18 +26,6 @@ import numpy as np
 
 def detect(save_img=False):
 
-    csv_columns = ['video_id','time','class',  
-                   'player1.x', 'player1.y',
-                   'player1.x', 'player1.y',
-                   'player2.x', 'player2.y',
-                   'player3.x', 'player3.y',
-                   'player4.x', 'player4.y',
-                   'player5.x', 'player5.y']
-
-    with open('classify.csv', mode='w', newline='') as f:
-        csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        csv_writer.writerow(csv_columns)
-
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
@@ -92,6 +80,19 @@ def detect(save_img=False):
     t0 = time.time()
     tmp_path = ''
     frame_count = 0
+    
+    csv_columns = ['video_id','time','class',  
+                   'player1.x', 'player1.y',
+                   'player1.x', 'player1.y',
+                   'player2.x', 'player2.y',
+                   'player3.x', 'player3.y',
+                   'player4.x', 'player4.y',
+                   'player5.x', 'player5.y']
+
+    with open('classify.csv', mode='w', newline='') as f:
+        csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer.writerow(csv_columns)
+        
     for path, img, im0s, vid_cap in dataset:
         if tmp_path != path:
             tmp_path = path
@@ -159,7 +160,7 @@ def detect(save_img=False):
                 row.append(pred_np_xy[distance_list[0][i]][0])
                 row.append(pred_np_xy[distance_list[0][i]][1])
             #print(row)
-            row.insert(0, 'play')
+            row.insert(0, '0')
             row.insert(0, frame_count*0.04)
             row.insert(0, path.split('\\')[-1].split('.')[0])
         else:
